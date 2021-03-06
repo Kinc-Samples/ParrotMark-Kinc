@@ -50,7 +50,7 @@ static void update(void) {
 }
 
 int kickstart(int argc, char **argv) {
-	kinc_init("TextureTest", 1024, 768, NULL, NULL);
+	kinc_init("ParrotMark", 1024, 768, NULL, NULL);
 	kinc_set_update_callback(update);
 
 	heap = (uint8_t *)malloc(HEAP_SIZE);

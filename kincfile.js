@@ -1,4 +1,4 @@
-let project = new Project('TextureTest');
+let project = new Project('ParrotMark');
 
 project.addFile('Sources/**');
 project.setDebugDir('Deployment');
