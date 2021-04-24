@@ -204,7 +204,7 @@ int kickstart(int argc, char **argv) {
 
 	kinc_mouse_press_callback = mouse_press;
 
-	kinc_g2_init();
+	kinc_g2_init(screen_width, screen_height);
 
 	kinc_start();
 
