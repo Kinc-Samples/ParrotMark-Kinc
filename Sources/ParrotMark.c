@@ -10,6 +10,11 @@
 #include <kinc/io/filereader.h>
 #include <kinc/system.h>
 
+#include <kinc/graphics2/graphics.h>
+#include <kinc/input/mouse.h>
+#include <kinc/log.h>
+#include <kinc/math/random.h>
+
 #include <assert.h>
 #include <stdlib.h>
 
@@ -22,6 +27,17 @@ static kinc_g4_texture_t texture;
 static kinc_g4_texture_unit_t texunit;
 static kinc_g4_constant_location_t offset;
 
+typedef struct Parrot {
+	float x, y;
+	float speedX, speedY;
+} Parrot_t;
+
+static Parrot_t *parrots = NULL;
+static size_t num_parrots = 0;
+
+float gravity = 0.5f;
+float maxX, maxY, minX, minY;
+
 #define HEAP_SIZE 1024 * 1024
 static uint8_t *heap = NULL;
 static size_t heap_top = 0;
@@ -33,98 +49,101 @@ static void *allocate(size_t size) {
 	return &heap[old_top];
 }
 
+uint64_t frame = 0;
+
 static void update(void) {
+	if (frame % 100 == 0) {
+		kinc_log(KINC_LOG_LEVEL_INFO, "Parrots: %i", num_parrots);
+	}
+	++frame;
+
+	for (int i = 0; i < num_parrots; ++i) {
+		Parrot_t *parrot = &parrots[i];
+
+		parrot->x += parrot->speedX;
+		parrot->y += parrot->speedY;
+		parrot->speedY += gravity;
+
+		if (parrot->x > maxX) {
+			parrot->speedX *= -1;
+			parrot->x = maxX;
+		}
+		else if (parrot->x < minX) {
+			parrot->speedX *= -1;
+			parrot->x = minX;
+		}
+
+		if (parrot->y > maxY) {
+			parrot->speedY *= -0.8f;
+			parrot->y = maxY;
+			if (kinc_random_get_in(0, 1) == 0) {
+				parrot->speedY -= 3 + kinc_random_get_in(0, 4);
+			}
+		}
+		else if (parrot->y < minY) {
+			parrot->speedY = 0;
+			parrot->y = minY;
+		}
+	}
+
 	kinc_g4_begin(0);
 	kinc_g4_clear(KINC_G4_CLEAR_COLOR, 0, 0.0f, 0);
 
-	kinc_g4_set_pipeline(&pipeline);
-	kinc_matrix3x3_t matrix = kinc_matrix3x_rotation_z((float)kinc_time());
-	kinc_g4_set_matrix3(offset, &matrix);
-	kinc_g4_set_vertex_buffer(&vertices);
-	kinc_g4_set_index_buffer(&indices);
-	kinc_g4_set_texture(texunit, &texture);
-	kinc_g4_draw_indexed_vertices();
+	kinc_g2_begin();
+
+	for (int i = 0; i < num_parrots; ++i) {
+		kinc_g2_draw_image(&texture, parrots[i].x, parrots[i].y);
+	}
+
+	kinc_g2_end();
 
 	kinc_g4_end(0);
 	kinc_g4_swap_buffers();
 }
 
+static void create_parrots(int count) {
+	for (int i = 0; i < count; ++i) {
+		++num_parrots;
+		parrots[num_parrots - 1].x = 0;
+		parrots[num_parrots - 1].y = 0;
+		parrots[num_parrots - 1].speedX = kinc_random_get_in(0, 500) / 100.0f;
+		parrots[num_parrots - 1].speedY = kinc_random_get_in(0, 100) / 10.0f / 2.0f - 2.5f;
+	}
+}
+
+void mouse_press(int window, int button, int x, int y) {
+	create_parrots(button == 1 ? 1000 : 10000);
+}
+
 int kickstart(int argc, char **argv) {
-	kinc_init("ParrotMark", 1024, 768, NULL, NULL);
+	int screen_width = 1024;
+	int screen_height = 768;
+	kinc_init("ParrotMark", screen_width, screen_height, NULL, NULL);
 	kinc_set_update_callback(update);
 
 	heap = (uint8_t *)malloc(HEAP_SIZE);
 	assert(heap != NULL);
 
-	{
-		kinc_image_t image;
-		void *image_mem = allocate(250 * 250 * 4);
-		kinc_image_init_from_file(&image, image_mem, "parrot.png");
-		kinc_g4_texture_init_from_image(&texture, &image);
-		kinc_image_destroy(&image);
-	}
+	kinc_random_init(kinc_time() * 1000.0);
 
-	{
-		kinc_file_reader_t reader;
-		kinc_file_reader_open(&reader, "texture.vert", KINC_FILE_TYPE_ASSET);
-		size_t size = kinc_file_reader_size(&reader);
-		uint8_t *data = allocate(size);
-		kinc_file_reader_read(&reader, data, size);
-		kinc_file_reader_close(&reader);
+	parrots = (Parrot_t *)malloc(sizeof(Parrot_t) * 10 * 1000 * 1000);
 
-		kinc_g4_shader_init(&vertexShader, data, size, KINC_G4_SHADER_TYPE_VERTEX);
-	}
+	kinc_image_t image;
+	void *image_mem = allocate(250 * 250 * 4);
+	kinc_image_init_from_file(&image, image_mem, "small_parrot.png");
+	kinc_g4_texture_init_from_image(&texture, &image);
+	kinc_image_destroy(&image);
 
-	{
-		kinc_file_reader_t reader;
-		kinc_file_reader_open(&reader, "texture.frag", KINC_FILE_TYPE_ASSET);
-		size_t size = kinc_file_reader_size(&reader);
-		uint8_t *data = allocate(size);
-		kinc_file_reader_read(&reader, data, size);
-		kinc_file_reader_close(&reader);
+	minX = 0.0f;
+	maxX = (float)(screen_width - image.width);
+	minY = 0.0f;
+	maxY = (float)(screen_height - image.height);
 
-		kinc_g4_shader_init(&fragmentShader, data, size, KINC_G4_SHADER_TYPE_FRAGMENT);
-	}
+	// create_parrots(1000);
 
-	kinc_g4_vertex_structure_t structure;
-	kinc_g4_vertex_structure_init(&structure);
-	kinc_g4_vertex_structure_add(&structure, "pos", KINC_G4_VERTEX_DATA_FLOAT3);
-	kinc_g4_vertex_structure_add(&structure, "tex", KINC_G4_VERTEX_DATA_FLOAT2);
-	kinc_g4_pipeline_init(&pipeline);
-	pipeline.input_layout[0] = &structure;
-	pipeline.input_layout[1] = NULL;
-	pipeline.vertex_shader = &vertexShader;
-	pipeline.fragment_shader = &fragmentShader;
-	kinc_g4_pipeline_compile(&pipeline);
+	kinc_mouse_press_callback = mouse_press;
 
-	texunit = kinc_g4_pipeline_get_texture_unit(&pipeline, "texsampler");
-	offset = kinc_g4_pipeline_get_constant_location(&pipeline, "mvp");
-
-	kinc_g4_vertex_buffer_init(&vertices, 3, &structure, KINC_G4_USAGE_STATIC, 0);
-	float *v = kinc_g4_vertex_buffer_lock_all(&vertices);
-	v[0] = -1.0f;
-	v[1] = -1.0f;
-	v[2] = 0.5f;
-	v[3] = 0.0f;
-	v[4] = 1.0f;
-	v[5] = 1.0f;
-	v[6] = -1.0f;
-	v[7] = 0.5f;
-	v[8] = 1.0f;
-	v[9] = 1.0f;
-	v[10] = -1.0f;
-	v[11] = 1.0f;
-	v[12] = 0.5f;
-	v[13] = 0.0f;
-	v[14] = 0.0f;
-	kinc_g4_vertex_buffer_unlock_all(&vertices);
-
-	kinc_g4_index_buffer_init(&indices, 3, KINC_G4_INDEX_BUFFER_FORMAT_32BIT);
-	int *i = kinc_g4_index_buffer_lock(&indices);
-	i[0] = 0;
-	i[1] = 1;
-	i[2] = 2;
-	kinc_g4_index_buffer_unlock(&indices);
+	kinc_g2_init();
 
 	kinc_start();
 
