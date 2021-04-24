@@ -18,7 +18,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-static kinc_g4_texture_t texture;
+// static kinc_g4_texture_t texture;
 
 typedef struct Parrot {
 	float x, y;
@@ -87,8 +87,10 @@ static void update_simple(void) {
 
 	kinc_g2_begin();
 
+	kinc_g2_clear(0.0f, 0.0f, 0.0f);
+
 	for (int i = 0; i < num_parrots; ++i) {
-		kinc_g2_draw_image(&texture, parrots[i].x, parrots[i].y);
+		kinc_g2_draw_image(&image, parrots[i].x, parrots[i].y);
 	}
 
 	kinc_g2_end();
@@ -138,9 +140,11 @@ static void update_rotating(void) {
 
 	kinc_g2_begin();
 
+	kinc_g2_clear(0.0f, 0.0f, 0.0f);
+
 	for (int i = 0; i < num_parrots; ++i) {
 		kinc_g2_set_rotation(parrots[i].rotation, parrots[i].x + image.width / 2.0f, parrots[i].y + image.height / 2.0f);
-		kinc_g2_draw_image(&texture, parrots[i].x, parrots[i].y);
+		kinc_g2_draw_image(&image, parrots[i].x, parrots[i].y);
 	}
 
 	kinc_g2_end();
@@ -171,11 +175,11 @@ int kickstart(int argc, char **argv) {
 
 	kinc_window_options_t win;
 	kinc_window_options_set_defaults(&win);
-	// win.display_index = 2;
+	win.display_index = 2;
 
 	kinc_init("ParrotMark", screen_width, screen_height, &win, NULL);
-	kinc_set_update_callback(update_simple);
-	// kinc_set_update_callback(update_rotating);
+	// kinc_set_update_callback(update_simple);
+	kinc_set_update_callback(update_rotating);
 
 	heap = (uint8_t *)malloc(HEAP_SIZE);
 	assert(heap != NULL);
@@ -186,15 +190,15 @@ int kickstart(int argc, char **argv) {
 
 	void *image_mem = allocate(250 * 250 * 4);
 	kinc_image_init_from_file(&image, image_mem, "small_parrot.png");
-	kinc_g4_texture_init_from_image(&texture, &image);
-	kinc_image_destroy(&image);
+	// kinc_g4_texture_init_from_image(&texture, &image);
+	// kinc_image_destroy(&image);
 
 	minX = 0.0f;
 	maxX = (float)(screen_width - image.width);
 	minY = 0.0f;
 	maxY = (float)(screen_height - image.height);
 
-	// create_parrots(1000);
+	create_parrots(100);
 
 	kinc_mouse_press_callback = mouse_press;
 
