@@ -29,7 +29,8 @@ static kinc_g4_constant_location_t offset;
 
 typedef struct Parrot {
 	float x, y;
-	float speedX, speedY;
+	float speed_x, speed_y;
+	float rotation, rotation_speed;
 } Parrot_t;
 
 static Parrot_t *parrots = NULL;
@@ -51,7 +52,7 @@ static void *allocate(size_t size) {
 
 uint64_t frame = 0;
 
-static void update(void) {
+static void update_simple(void) {
 	if (frame % 100 == 0) {
 		kinc_log(KINC_LOG_LEVEL_INFO, "Parrots: %i", num_parrots);
 	}
@@ -60,28 +61,28 @@ static void update(void) {
 	for (int i = 0; i < num_parrots; ++i) {
 		Parrot_t *parrot = &parrots[i];
 
-		parrot->x += parrot->speedX;
-		parrot->y += parrot->speedY;
-		parrot->speedY += gravity;
+		parrot->x += parrot->speed_x;
+		parrot->y += parrot->speed_y;
+		parrot->speed_y += gravity;
 
 		if (parrot->x > maxX) {
-			parrot->speedX *= -1;
+			parrot->speed_x *= -1;
 			parrot->x = maxX;
 		}
 		else if (parrot->x < minX) {
-			parrot->speedX *= -1;
+			parrot->speed_x *= -1;
 			parrot->x = minX;
 		}
 
 		if (parrot->y > maxY) {
-			parrot->speedY *= -0.8f;
+			parrot->speed_y *= -0.8f;
 			parrot->y = maxY;
 			if (kinc_random_get_in(0, 1) == 0) {
-				parrot->speedY -= 3 + kinc_random_get_in(0, 4);
+				parrot->speed_y -= 3 + kinc_random_get_in(0, 4);
 			}
 		}
 		else if (parrot->y < minY) {
-			parrot->speedY = 0;
+			parrot->speed_y = 0;
 			parrot->y = minY;
 		}
 	}
@@ -101,13 +102,67 @@ static void update(void) {
 	kinc_g4_swap_buffers();
 }
 
+static void update_rotating(void) {
+	if (frame % 100 == 0) {
+		kinc_log(KINC_LOG_LEVEL_INFO, "Parrots: %i", num_parrots);
+	}
+	++frame;
+
+	for (int i = 0; i < num_parrots; ++i) {
+		Parrot_t *parrot = &parrots[i];
+
+		parrot->x += parrot->speed_x;
+		parrot->y += parrot->speed_y;
+		parrot->speed_y += gravity;
+		parrot->rotation += parrot->rotation_speed;
+
+		if (parrot->x > maxX) {
+			parrot->speed_x *= -1;
+			parrot->x = maxX;
+		}
+		else if (parrot->x < minX) {
+			parrot->speed_x *= -1;
+			parrot->x = minX;
+		}
+
+		if (parrot->y > maxY) {
+			parrot->speed_y *= -0.8f;
+			parrot->y = maxY;
+			if (kinc_random_get_in(0, 1) == 0) {
+				parrot->speed_y -= 3 + kinc_random_get_in(0, 4);
+			}
+		}
+		else if (parrot->y < minY) {
+			parrot->speed_y = 0;
+			parrot->y = minY;
+		}
+	}
+
+	kinc_g4_begin(0);
+	kinc_g4_clear(KINC_G4_CLEAR_COLOR, 0, 0.0f, 0);
+
+	kinc_g2_begin();
+
+	for (int i = 0; i < num_parrots; ++i) {
+		kinc_g2_set_rotation(parrots[i].rotation, parrots[i].x + texture.tex_width / 2.0f, parrots[i].y + texture.tex_height / 2.0f);
+		kinc_g2_draw_image(&texture, parrots[i].x, parrots[i].y);
+	}
+
+	kinc_g2_end();
+
+	kinc_g4_end(0);
+	kinc_g4_swap_buffers();
+}
+
 static void create_parrots(int count) {
 	for (int i = 0; i < count; ++i) {
 		++num_parrots;
 		parrots[num_parrots - 1].x = 0;
 		parrots[num_parrots - 1].y = 0;
-		parrots[num_parrots - 1].speedX = kinc_random_get_in(0, 500) / 100.0f;
-		parrots[num_parrots - 1].speedY = kinc_random_get_in(0, 100) / 10.0f / 2.0f - 2.5f;
+		parrots[num_parrots - 1].speed_x = kinc_random_get_in(0, 500) / 100.0f;
+		parrots[num_parrots - 1].speed_y = kinc_random_get_in(0, 100) / 10.0f / 2.0f - 2.5f;
+		parrots[num_parrots - 1].rotation = 0.0f;
+		parrots[num_parrots - 1].rotation_speed = kinc_random_get_in(1, 100) / 100.0f;
 	}
 }
 
@@ -119,12 +174,13 @@ int kickstart(int argc, char **argv) {
 	int screen_width = 1024;
 	int screen_height = 768;
 	kinc_init("ParrotMark", screen_width, screen_height, NULL, NULL);
-	kinc_set_update_callback(update);
+	// kinc_set_update_callback(update_simple);
+	kinc_set_update_callback(update_rotating);
 
 	heap = (uint8_t *)malloc(HEAP_SIZE);
 	assert(heap != NULL);
 
-	kinc_random_init(kinc_time() * 1000.0);
+	kinc_random_init((int)(kinc_time() * 1000.0));
 
 	parrots = (Parrot_t *)malloc(sizeof(Parrot_t) * 10 * 1000 * 1000);
 
