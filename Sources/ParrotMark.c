@@ -18,14 +18,7 @@
 #include <assert.h>
 #include <stdlib.h>
 
-static kinc_g4_shader_t vertexShader;
-static kinc_g4_shader_t fragmentShader;
-static kinc_g4_pipeline_t pipeline;
-static kinc_g4_vertex_buffer_t vertices;
-static kinc_g4_index_buffer_t indices;
 static kinc_g4_texture_t texture;
-static kinc_g4_texture_unit_t texunit;
-static kinc_g4_constant_location_t offset;
 
 typedef struct Parrot {
 	float x, y;
@@ -36,8 +29,10 @@ typedef struct Parrot {
 static Parrot_t *parrots = NULL;
 static size_t num_parrots = 0;
 
-float gravity = 0.5f;
-float maxX, maxY, minX, minY;
+static float gravity = 0.5f;
+static float maxX, maxY, minX, minY;
+
+static kinc_image_t image;
 
 #define HEAP_SIZE 1024 * 1024
 static uint8_t *heap = NULL;
@@ -144,7 +139,7 @@ static void update_rotating(void) {
 	kinc_g2_begin();
 
 	for (int i = 0; i < num_parrots; ++i) {
-		kinc_g2_set_rotation(parrots[i].rotation, parrots[i].x + texture.tex_width / 2.0f, parrots[i].y + texture.tex_height / 2.0f);
+		kinc_g2_set_rotation(parrots[i].rotation, parrots[i].x + image.width / 2.0f, parrots[i].y + image.height / 2.0f);
 		kinc_g2_draw_image(&texture, parrots[i].x, parrots[i].y);
 	}
 
@@ -189,7 +184,6 @@ int kickstart(int argc, char **argv) {
 
 	parrots = (Parrot_t *)malloc(sizeof(Parrot_t) * 10 * 1000 * 1000);
 
-	kinc_image_t image;
 	void *image_mem = allocate(250 * 250 * 4);
 	kinc_image_init_from_file(&image, image_mem, "small_parrot.png");
 	kinc_g4_texture_init_from_image(&texture, &image);
