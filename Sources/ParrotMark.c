@@ -1,5 +1,6 @@
 #include "pch.h"
 
+#include <kinc/graphics2/graphics.h>
 #include <kinc/graphics4/graphics.h>
 #include <kinc/graphics4/indexbuffer.h>
 #include <kinc/graphics4/pipeline.h>
@@ -7,13 +8,12 @@
 #include <kinc/graphics4/texture.h>
 #include <kinc/graphics4/vertexbuffer.h>
 #include <kinc/image.h>
-#include <kinc/io/filereader.h>
-#include <kinc/system.h>
-
-#include <kinc/graphics2/graphics.h>
 #include <kinc/input/mouse.h>
+#include <kinc/io/filereader.h>
 #include <kinc/log.h>
 #include <kinc/math/random.h>
+#include <kinc/system.h>
+#include <kinc/window.h>
 
 #include <assert.h>
 #include <stdlib.h>
@@ -173,9 +173,14 @@ void mouse_press(int window, int button, int x, int y) {
 int kickstart(int argc, char **argv) {
 	int screen_width = 1024;
 	int screen_height = 768;
-	kinc_init("ParrotMark", screen_width, screen_height, NULL, NULL);
-	// kinc_set_update_callback(update_simple);
-	kinc_set_update_callback(update_rotating);
+
+	kinc_window_options_t win;
+	kinc_window_options_set_defaults(&win);
+	// win.display_index = 2;
+
+	kinc_init("ParrotMark", screen_width, screen_height, &win, NULL);
+	kinc_set_update_callback(update_simple);
+	// kinc_set_update_callback(update_rotating);
 
 	heap = (uint8_t *)malloc(HEAP_SIZE);
 	assert(heap != NULL);
