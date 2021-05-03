@@ -135,9 +135,6 @@ static void update_rotating(void) {
 		}
 	}
 
-	kinc_g4_begin(0);
-	kinc_g4_clear(KINC_G4_CLEAR_COLOR, 0, 0.0f, 0);
-
 	kinc_g2_begin();
 
 	kinc_g2_clear(0.0f, 0.0f, 0.0f);
@@ -149,7 +146,6 @@ static void update_rotating(void) {
 
 	kinc_g2_end();
 
-	kinc_g4_end(0);
 	kinc_g4_swap_buffers();
 }
 
