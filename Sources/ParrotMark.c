@@ -1,5 +1,4 @@
-#include "pch.h"
-
+#include <kinc/display.h>
 #include <kinc/graphics2/graphics.h>
 #include <kinc/graphics4/graphics.h>
 #include <kinc/graphics4/indexbuffer.h>
@@ -160,6 +159,8 @@ void mouse_press(int window, int button, int x, int y) {
 int kickstart(int argc, char **argv) {
 	int screen_width = 1024;
 	int screen_height = 768;
+
+	kinc_display_init();
 
 	kinc_window_options_t win;
 	kinc_window_options_set_defaults(&win);
